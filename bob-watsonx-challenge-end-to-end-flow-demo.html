@@ -1,0 +1,802 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Bob × watsonx — End-to-End Flow Demo</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;background:#f4f4f4;color:#1f2328;font-size:14px;line-height:1.5}
+
+  /* ── NAV ── */
+  .top-nav{background:#161616;color:#f4f4f4;display:flex;align-items:center;gap:12px;padding:0 16px;height:48px;position:sticky;top:0;z-index:200}
+  .top-nav .logo{font-size:16px;font-weight:600;color:#fff;letter-spacing:.5px}
+  .top-nav .badge{background:#0f62fe;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:2px;letter-spacing:.5px}
+  .top-nav .tagline{font-size:12px;color:#8d8d8d;margin-left:auto}
+
+  /* ── STAGE NAV ── */
+  .stage-nav{background:#262626;padding:0 16px;display:flex;gap:0;overflow-x:auto;border-bottom:2px solid #393939}
+  .stage-btn{background:none;border:none;color:#8d8d8d;cursor:pointer;padding:12px 18px;font-size:12px;font-weight:500;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+  .stage-btn:hover{color:#f4f4f4;background:#353535}
+  .stage-btn.active{color:#78a9ff;border-bottom-color:#78a9ff}
+  .stage-btn .num{display:inline-block;width:18px;height:18px;background:#393939;border-radius:50%;font-size:10px;text-align:center;line-height:18px;margin-right:6px}
+  .stage-btn.active .num{background:#0f62fe;color:#fff}
+  .stage-btn.done .num{background:#198038;color:#fff}
+
+  /* ── FLOW DIAGRAM ── */
+  .flow-section{background:#1c1c1c;padding:12px 16px;border-bottom:1px solid #393939;overflow-x:auto}
+  .flow-diagram{display:flex;align-items:center;gap:0;min-width:fit-content}
+  .flow-step{display:flex;flex-direction:column;align-items:center;min-width:110px}
+  .flow-step .step-label{font-size:9px;color:#6f6f6f;margin-bottom:4px;text-align:center}
+  .flow-step .step-box{background:#393939;border:1px solid #525252;border-radius:4px;padding:6px 8px;font-size:10px;color:#e0e0e0;text-align:center;min-width:100px;cursor:pointer;transition:all .15s}
+  .flow-step .step-box:hover{background:#474747}
+  .flow-step .step-box.active{background:#0f62fe;border-color:#0f62fe;color:#fff}
+  .flow-step .step-box.done{background:#1a3a1a;border-color:#198038;color:#42be65}
+  .flow-step .step-box.slack{border-color:#611f69}
+  .flow-arrow{color:#525252;font-size:18px;padding:0 4px;flex-shrink:0}
+
+  /* ── MAIN CONTENT ── */
+  .content{display:flex;height:calc(100vh - 130px);min-height:500px}
+
+  /* ── SIDEBAR ── */
+  .sidebar{width:280px;flex-shrink:0;background:#262626;border-right:1px solid #393939;overflow-y:auto;padding:16px}
+  .sidebar h3{font-size:11px;font-weight:600;color:#6f6f6f;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+  .step-item{display:flex;gap:10px;padding:10px;border-radius:4px;cursor:pointer;margin-bottom:4px;border:1px solid transparent;transition:all .15s}
+  .step-item:hover{background:#353535}
+  .step-item.active{background:#1a2a4a;border-color:#0f62fe}
+  .step-item.done{opacity:.7}
+  .step-num{width:24px;height:24px;border-radius:50%;background:#393939;color:#c6c6c6;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .step-item.active .step-num{background:#0f62fe;color:#fff}
+  .step-item.done .step-num{background:#198038;color:#fff}
+  .step-text{font-size:12px;color:#c6c6c6;line-height:1.4}
+  .step-text .who{font-size:10px;color:#8d8d8d;margin-bottom:2px}
+  .step-text strong{color:#f4f4f4}
+
+  /* ── MAIN PANEL ── */
+  .main{flex:1;overflow-y:auto;background:#f4f4f4;display:flex;flex-direction:column}
+
+  /* ── BOB CHAT WINDOW ── */
+  .bob-shell{flex:1;display:flex;flex-direction:column;background:#fff;border-radius:0;overflow:hidden}
+  .bob-header{background:#161616;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #393939}
+  .bob-avatar{width:32px;height:32px;background:#0f62fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+  .bob-header-text .name{font-size:14px;font-weight:600}
+  .bob-header-text .sub{font-size:11px;color:#8d8d8d}
+  .bob-header .pills{margin-left:auto;display:flex;gap:6px}
+  .pill{background:#262626;color:#78a9ff;font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid #393939}
+
+  .bob-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;background:#f8f8f8}
+
+  .msg{display:flex;gap:12px;max-width:85%}
+  .msg.user{flex-direction:row-reverse;align-self:flex-end}
+  .msg .avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:2px}
+  .msg.bob .avatar{background:#0f62fe;color:#fff}
+  .msg.user .avatar{background:#393939;color:#f4f4f4}
+  .msg .bubble{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.6;color:#1f2328}
+  .msg.user .bubble{background:#0f62fe;color:#fff;border-color:#0f62fe}
+  .msg .bubble pre{background:#f4f4f4;border:1px solid #e0e0e0;border-radius:4px;padding:10px;font-size:11px;margin-top:8px;overflow-x:auto;white-space:pre-wrap;color:#1f2328}
+  .msg .bubble .file-chip{display:inline-flex;align-items:center;gap:6px;background:#e8f4fd;border:1px solid #bbd6f5;border-radius:4px;padding:4px 10px;font-size:11px;color:#0043ce;margin-top:8px;cursor:pointer}
+  .msg .bubble .badge-success{display:inline-block;background:#d9fbdb;color:#198038;border:1px solid #a7f0ba;border-radius:3px;padding:1px 7px;font-size:11px;margin-left:6px}
+  .msg .bubble .badge-warn{display:inline-block;background:#fff8e1;color:#d2691e;border:1px solid #ffd54f;border-radius:3px;padding:1px 7px;font-size:11px;margin-left:6px}
+  .msg .bubble .badge-info{display:inline-block;background:#e8f4fd;color:#0043ce;border:1px solid #bbd6f5;border-radius:3px;padding:1px 7px;font-size:11px;margin-left:6px}
+
+  .action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .btn-primary{background:#0f62fe;color:#fff;border:none;padding:8px 16px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;transition:background .15s}
+  .btn-primary:hover{background:#0353e9}
+  .btn-secondary{background:#fff;color:#0f62fe;border:1px solid #0f62fe;padding:8px 16px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
+  .btn-secondary:hover{background:#e8f0fe}
+  .btn-danger{background:#fff;color:#da1e28;border:1px solid #da1e28;padding:8px 16px;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600}
+
+  /* ── TYPING INDICATOR ── */
+  .typing{display:flex;gap:5px;align-items:center;padding:8px 14px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;width:fit-content}
+  .typing span{width:6px;height:6px;background:#8d8d8d;border-radius:50%;animation:bounce 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}
+  .typing span:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+  /* ── BOB INPUT ── */
+  .bob-input-area{padding:16px 20px;background:#fff;border-top:1px solid #e0e0e0;display:flex;gap:10px;align-items:flex-end}
+  .bob-input{flex:1;border:1px solid #c6c6c6;border-radius:4px;padding:10px 14px;font-size:13px;resize:none;font-family:inherit;line-height:1.5;background:#fff;color:#1f2328}
+  .bob-input:focus{outline:none;border-color:#0f62fe}
+  .send-btn{background:#0f62fe;color:#fff;border:none;width:36px;height:36px;border-radius:4px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── PANELS ── */
+  .info-panel{padding:20px;background:#fff;border-left:1px solid #e0e0e0;width:260px;flex-shrink:0;overflow-y:auto;display:none}
+  .info-panel.visible{display:block}
+  .info-panel h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6f6f6f;margin-bottom:12px}
+  .info-panel .card{background:#f4f4f4;border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:10px}
+  .info-panel .card h5{font-size:12px;font-weight:600;margin-bottom:6px;color:#1f2328}
+  .info-panel .card p{font-size:11px;color:#525252;line-height:1.5}
+  .info-panel .stat{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid #e8e8e8}
+  .info-panel .stat:last-child{border:none}
+
+  /* ── SLACK NOTIFICATION ── */
+  .slack-notif{background:#4a154b;color:#fff;border-radius:8px;padding:12px;margin-top:8px;display:flex;gap:10px;align-items:flex-start}
+  .slack-icon{font-size:20px;flex-shrink:0}
+  .slack-text .channel{font-size:10px;color:#e8b4f0;margin-bottom:2px}
+  .slack-text .message{font-size:12px;line-height:1.5}
+  .slack-text .message a{color:#b8e4ff;text-decoration:underline}
+
+  /* ── GITHUB PANEL ── */
+  .github-panel{background:#0d1117;color:#e6edf3;border-radius:8px;padding:16px;margin-top:8px;font-size:12px}
+  .github-panel .gh-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;border-bottom:1px solid #30363d;padding-bottom:10px}
+  .pr-badge{background:#1f6feb;color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+  .pr-badge.merged{background:#8250df}
+  .pr-badge.open{background:#238636}
+  .file-list{font-size:11px}
+  .file-item{display:flex;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #21262d}
+  .file-item .plus{color:#3fb950}
+  .file-item .minus{color:#f85149}
+  .diff-pill{background:#3fb950;color:#000;border-radius:2px;padding:0 4px;font-size:10px}
+  .diff-pill.del{background:#f85149;color:#fff}
+
+  /* ── SPEC VIEWER ── */
+  .spec-viewer{background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:16px;font-size:11px;font-family:monospace;line-height:1.7;margin-top:8px;max-height:280px;overflow-y:auto}
+  .spec-viewer .kw{color:#569cd6}
+  .spec-viewer .str{color:#ce9178}
+  .spec-viewer .com{color:#6a9955}
+  .spec-viewer .num{color:#b5cea8}
+  .spec-viewer .prop{color:#9cdcfe}
+
+  /* ── TEST RESULTS ── */
+  .test-panel{background:#0d1117;color:#e6edf3;border-radius:8px;padding:14px;margin-top:8px;font-size:11px;font-family:monospace}
+  .test-panel .t-pass{color:#3fb950}
+  .test-panel .t-fail{color:#f85149}
+  .test-panel .t-head{color:#79c0ff;margin-bottom:8px;font-size:12px}
+  .test-panel .t-line{padding:3px 0;display:flex;gap:8px}
+  .test-panel .t-summary{margin-top:10px;padding-top:10px;border-top:1px solid #30363d;font-size:12px}
+
+  /* ── PROGRESS ── */
+  .progress-bar{height:3px;background:#393939;position:relative;overflow:hidden}
+  .progress-bar .fill{height:100%;background:#0f62fe;transition:width .4s ease}
+
+  /* ── SCREEN ── */
+  .screen{display:none;flex:1;flex-direction:column}
+  .screen.active{display:flex}
+
+  /* ── INTRO ── */
+  .intro-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;background:#fff;text-align:center;gap:20px;flex:1}
+  .intro-screen h1{font-size:28px;font-weight:300;color:#1f2328;line-height:1.3}
+  .intro-screen h1 strong{font-weight:700;color:#0f62fe}
+  .intro-screen p{font-size:14px;color:#525252;max-width:540px;line-height:1.7}
+  .intro-screen .flow-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:600px}
+  .flow-pill{background:#f4f4f4;border:1px solid #e0e0e0;border-radius:20px;padding:6px 14px;font-size:12px;color:#525252}
+  .flow-pill .arrow{color:#0f62fe;font-weight:700}
+  .start-btn{background:#0f62fe;color:#fff;border:none;padding:14px 32px;border-radius:4px;font-size:16px;cursor:pointer;font-weight:600;letter-spacing:.5px;transition:background .15s}
+  .start-btn:hover{background:#0353e9}
+
+  /* ── HIDDEN ── */
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+
+<nav class="top-nav">
+  <span class="logo">Bob</span>
+  <span class="badge">AI AGENT</span>
+  <span style="color:#525252;font-size:20px;margin:0 4px">|</span>
+  <span style="font-size:13px;color:#c6c6c6">watsonx Challenge — End-to-End Demo</span>
+  <span class="tagline">PRD → Spec → Code → PR</span>
+</nav>
+
+
+<div class="stage-nav" id="stageNav">
+  <button class="stage-btn active" id="stageBtn0" data-stage="0"><span class="num">●</span>Overview</button>
+  <button class="stage-btn" id="stageBtn1" data-stage="1"><span class="num">1</span>Upload PRD</button>
+  <button class="stage-btn" id="stageBtn2" data-stage="2"><span class="num">2</span>Spec Gen</button>
+  <button class="stage-btn" id="stageBtn3" data-stage="3"><span class="num">3</span>Spec Review</button>
+  <button class="stage-btn" id="stageBtn4" data-stage="4"><span class="num">4</span>Raise PR</button>
+  <button class="stage-btn" id="stageBtn5" data-stage="5"><span class="num">5</span>Merge PR</button>
+  <button class="stage-btn" id="stageBtn6" data-stage="6"><span class="num">6</span>Code Gen</button>
+  <button class="stage-btn" id="stageBtn7" data-stage="7"><span class="num">7</span>Test &amp; PR</button>
+</div>
+
+
+<div class="flow-section" id="flowSection">
+  <div class="flow-diagram" id="flowDiagram">
+    <div class="flow-step" id="fd0">
+      <div class="step-label">Bob</div>
+      <div class="step-box active" data-stage="1">Upload PRD<br />to Bob</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fd1">
+      <div class="step-label">Bob Agent</div>
+      <div class="step-box" data-stage="2">Spec Generated<br />by Bob</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fd2">
+      <div class="step-label">Bob Agent</div>
+      <div class="step-box" data-stage="3">Spec Reviewed<br />Failure/Success</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fd3">
+      <div class="step-label">Bob</div>
+      <div class="step-box" data-stage="4">PR Raised<br />to merge spec</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fd4">
+      <div class="step-label">GitHub + Human</div>
+      <div class="step-box" data-stage="5">PR Reviewed<br />&amp; Merged</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fd5">
+      <div class="step-label">Bob</div>
+      <div class="step-box" data-stage="6">Generate Code<br />Backend + Frontend</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" id="fd6">
+      <div class="step-label">Bob</div>
+      <div class="step-box" data-stage="7">Tests Run<br />Raise PR</div>
+    </div>
+  </div>
+</div>
+
+
+<div class="content">
+
+  
+  <div class="sidebar" id="sidebar">
+    <h3>Workflow Steps</h3>
+    <div class="step-item active" id="si0" data-stage="0">
+      <div class="step-num">★</div>
+      <div class="step-text"><div class="who">Overview</div><strong>Start Here</strong><br />Full flow overview</div>
+    </div>
+    <div class="step-item" id="si1" data-stage="1">
+      <div class="step-num">1</div>
+      <div class="step-text"><div class="who">User → Bob</div><strong>Upload PRD</strong><br />PRD doc uploaded to Bob</div>
+    </div>
+    <div class="step-item" id="si2" data-stage="2">
+      <div class="step-num">2</div>
+      <div class="step-text"><div class="who">Bob Agent</div><strong>Spec Generation</strong><br />Bob creates spec + test cases</div>
+    </div>
+    <div class="step-item" id="si3" data-stage="3">
+      <div class="step-num">3</div>
+      <div class="step-text"><div class="who">Bob Agent</div><strong>Spec Review</strong><br />AI self-review &amp; validation</div>
+    </div>
+    <div class="step-item" id="si4" data-stage="4">
+      <div class="step-num">4</div>
+      <div class="step-text"><div class="who">Bob → GitHub</div><strong>Raise Spec PR</strong><br />PR created + Slack notify</div>
+    </div>
+    <div class="step-item" id="si5" data-stage="5">
+      <div class="step-num">5</div>
+      <div class="step-text"><div class="who">GitHub + Human</div><strong>Merge PR</strong><br />Human approves, merges</div>
+    </div>
+    <div class="step-item" id="si6" data-stage="6">
+      <div class="step-num">6</div>
+      <div class="step-text"><div class="who">Bob Agent</div><strong>Code Generation</strong><br />Backend + frontend code</div>
+    </div>
+    <div class="step-item" id="si7" data-stage="7">
+      <div class="step-num">7</div>
+      <div class="step-text"><div class="who">Bob → GitHub</div><strong>Tests + PR</strong><br />Run tests, raise final PR</div>
+    </div>
+  </div>
+
+  
+  <div class="main" id="mainContent">
+
+    
+    <div class="screen active" id="screen0">
+      <div class="intro-screen">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div style="width:56px;height:56px;background:#0f62fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff">B</div>
+          <div style="text-align:left">
+            <div style="font-size:11px;color:#8d8d8d;text-transform:uppercase;letter-spacing:1px">watsonx Challenge</div>
+            <div style="font-size:22px;font-weight:700;color:#0f62fe">Bob AI Agent</div>
+          </div>
+        </div>
+        <h1>From <strong>PRD to Production PR</strong><br />in one automated workflow</h1>
+        <p>Bob, IBM's AI coding assistant, orchestrates the complete software delivery pipeline — from uploading a Product Requirements Document to generating specs, code, tests, and raising pull requests — with human checkpoints and Slack notifications at every milestone.</p>
+        <div class="flow-pills">
+          <div class="flow-pill">📄 Upload PRD</div>
+          <div class="flow-pill" style="color:#0f62fe;font-weight:700">→</div>
+          <div class="flow-pill">🤖 Bob generates Spec</div>
+          <div class="flow-pill" style="color:#0f62fe;font-weight:700">→</div>
+          <div class="flow-pill">✅ AI Review</div>
+          <div class="flow-pill" style="color:#0f62fe;font-weight:700">→</div>
+          <div class="flow-pill">🔀 PR → Merge</div>
+          <div class="flow-pill" style="color:#0f62fe;font-weight:700">→</div>
+          <div class="flow-pill">💻 Code Gen</div>
+          <div class="flow-pill" style="color:#0f62fe;font-weight:700">→</div>
+          <div class="flow-pill">🧪 Tests</div>
+          <div class="flow-pill" style="color:#0f62fe;font-weight:700">→</div>
+          <div class="flow-pill">🚀 Final PR</div>
+        </div>
+        <div style="background:#f4f4f4;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;max-width:520px;text-align:left">
+          <div style="font-size:11px;font-weight:700;color:#6f6f6f;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Bob Capabilities Used</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:#525252">
+            <div>🎨 design-handoff-analyzer</div>
+            <div>♿ accessibility-validator</div>
+            <div>🛡️ design-system-guardian</div>
+            <div>🔌 Figma MCP</div>
+            <div>🐙 GitHub MCP</div>
+            <div>🆕 Accessibility MCP</div>
+            <div>💬 VS Code Extension</div>
+            <div>🔔 Slack Notifications</div>
+          </div>
+        </div>
+        <button class="start-btn" id="startBtn">Start Demo →</button>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen1">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar">B</div>
+          <div class="bob-header-text"><div class="name">Bob — Agent Mode</div><div class="sub">Step 1 · Upload PRD Document</div></div>
+          <div class="pills"><span class="pill">vs code</span><span class="pill">prd-to-spec</span></div>
+        </div>
+        <div class="bob-messages" id="msgs1">
+          <div class="msg bob">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              👋 Hi! I'm Bob, your AI coding assistant.<br /><br />
+              I can help you go from a <strong>Product Requirements Document (PRD)</strong> all the way to a <strong>merged pull request</strong> with code and tests.<br /><br />
+              To get started, upload your PRD document and I'll generate a technical spec and test cases automatically.
+              <div class="action-row">
+                <span class="badge-info">Waiting for PRD upload</span>
+              </div>
+            </div>
+          </div>
+          <div class="msg user" id="step1-user" style="display:none">
+            <div class="avatar">U</div>
+            <div class="bubble">
+              Here's the PRD for the new User Authentication feature.
+              <div class="file-chip">📄 PRD_UserAuth_v2.pdf <span style="margin-left:6px;color:#198038">✓ 2.4 MB</span></div>
+            </div>
+          </div>
+          <div class="msg bob" id="step1-bob" style="display:none">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              📥 PRD received! <span class="badge-success">File accepted</span><br /><br />
+              I'm analysing <strong>PRD_UserAuth_v2.pdf</strong>. Here's what I found:<br />
+              <pre>📋 Document Summary:
+  • Product: User Authentication Module
+  • Sections: 8 (Goals, Personas, Requirements, API, UI, Security, Testing, Risks)
+  • Requirements: 24 functional, 6 non-functional
+  • Affected services: auth-service, user-service, api-gateway
+  • Tech stack: Node.js, React, PostgreSQL</pre>
+              Ready to generate the technical spec. Shall I proceed?
+              <div class="action-row">
+                <button class="btn-primary" id="proceedSpec">Generate Spec →</button>
+                <button class="btn-secondary">View PRD Summary</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn" id="uploadPRD">↑</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen2">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar">B</div>
+          <div class="bob-header-text"><div class="name">Bob — Agent Mode</div><div class="sub">Step 2 · Generating Technical Spec</div></div>
+          <div class="pills"><span class="pill">spec-gen</span><span class="pill">test-cases</span></div>
+        </div>
+        <div class="bob-messages" id="msgs2">
+          <div class="msg bob">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              🚀 Starting spec generation from <strong>PRD_UserAuth_v2.pdf</strong>…<br /><br />
+              I'll create:
+              <ul style="margin-left:18px;margin-top:6px;font-size:12px;line-height:2">
+                <li>Technical specification (OpenAPI / markdown)</li>
+                <li>API endpoint definitions</li>
+                <li>Data models &amp; schemas</li>
+                <li>Test case scenarios (unit + integration)</li>
+              </ul>
+            </div>
+          </div>
+          <div class="msg bob" id="step2-typing">
+            <div class="avatar">B</div>
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="msg bob" id="step2-spec" style="display:none">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              ✅ Spec generated! <span class="badge-success">24 requirements mapped</span><br /><br />
+              <div class="spec-viewer">
+<span class="com"># auth-service — Technical Specification v1.0</span>
+<span class="com"># Generated by Bob from PRD_UserAuth_v2.pdf</span>
+
+<span class="kw">endpoints:</span>
+  <span class="prop">POST</span> <span class="str">/auth/login</span>
+    <span class="kw">description:</span> <span class="str">"Authenticate user with email + password"</span>
+    <span class="kw">request:</span>
+      <span class="prop">email:</span> <span class="kw">string</span> <span class="com"># required, RFC 5322</span>
+      <span class="prop">password:</span> <span class="kw">string</span> <span class="com"># required, min 8 chars</span>
+      <span class="prop">mfa_token:</span> <span class="kw">string?</span> <span class="com"># optional TOTP</span>
+    <span class="kw">response:</span>
+      <span class="prop">access_token:</span> <span class="kw">JWT</span> <span class="com"># expires 15m</span>
+      <span class="prop">refresh_token:</span> <span class="kw">string</span> <span class="com"># expires 7d</span>
+    <span class="kw">errors:</span> <span class="num">401</span>, <span class="num">422</span>, <span class="num">429</span>
+
+  <span class="prop">POST</span> <span class="str">/auth/refresh</span>
+    <span class="kw">description:</span> <span class="str">"Rotate access token using refresh token"</span>
+
+  <span class="prop">POST</span> <span class="str">/auth/logout</span>
+    <span class="kw">description:</span> <span class="str">"Invalidate tokens for current session"</span>
+
+  <span class="prop">GET</span>  <span class="str">/auth/me</span>
+    <span class="kw">description:</span> <span class="str">"Return current user profile"</span>
+    <span class="kw">security:</span> Bearer JWT
+
+<span class="kw">test_cases:</span>
+  <span class="prop">TC-001:</span> <span class="str">"Valid credentials return 200 + JWT"</span>
+  <span class="prop">TC-002:</span> <span class="str">"Invalid password returns 401"</span>
+  <span class="prop">TC-003:</span> <span class="str">"Expired token returns 401 with refresh hint"</span>
+  <span class="prop">TC-004:</span> <span class="str">"Rate limit after 5 failed attempts → 429"</span>
+  <span class="prop">TC-005:</span> <span class="str">"MFA required when user has TOTP enabled"</span>
+  <span class="prop">TC-006:</span> <span class="str">"Refresh token rotation invalidates old token"</span>
+              </div>
+              <div class="action-row">
+                <div style="font-size:12px;color:#525252">4 endpoints · 6 test cases · 3 data models</div>
+              </div>
+              <div class="action-row">
+                <button class="btn-primary" id="reviewSpec">Review Spec →</button>
+                <button class="btn-secondary">Download spec.yaml</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen3">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar">B</div>
+          <div class="bob-header-text"><div class="name">Bob — Agent Mode</div><div class="sub">Step 3 · AI Spec Review &amp; Validation</div></div>
+          <div class="pills"><span class="pill">self-review</span><span class="pill">validation</span></div>
+        </div>
+        <div class="bob-messages" id="msgs3">
+          <div class="msg bob">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              🔍 Running automated spec review against PRD requirements…<br /><br />
+              Checking:
+              <ul style="margin-left:18px;margin-top:6px;font-size:12px;line-height:2">
+                <li>All PRD functional requirements covered</li>
+                <li>API contracts are consistent</li>
+                <li>Security requirements met (TLS, JWT, rate limiting)</li>
+                <li>Test cases cover edge cases</li>
+              </ul>
+            </div>
+          </div>
+          <div class="msg bob" id="step3-typing">
+            <div class="avatar">B</div>
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="msg bob" id="step3-result" style="display:none">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              <strong>Spec Review Complete</strong> <span class="badge-success">PASSED</span><br /><br />
+              <div style="background:#f4f4f4;border:1px solid #e0e0e0;border-radius:6px;padding:12px;font-size:12px;margin-top:6px">
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e0e0e0"><span>Requirements coverage</span><span style="color:#198038;font-weight:600">24/24 ✓</span></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e0e0e0"><span>API consistency</span><span style="color:#198038;font-weight:600">✓ Pass</span></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e0e0e0"><span>Security requirements</span><span style="color:#198038;font-weight:600">✓ Pass</span></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e0e0e0"><span>Test case coverage</span><span style="color:#d2691e;font-weight:600">⚠ 1 warning</span></div>
+                <div style="padding:6px 0;font-size:11px;color:#d2691e">⚠ TC-006: Consider adding a test for concurrent refresh token rotation</div>
+              </div>
+              <br />
+              Spec is ready to merge. Should I raise a PR to merge spec into the repo? <span class="badge-info">Y / N</span>
+              <div class="action-row">
+                <button class="btn-primary" id="raiseSpecPR">✓ Yes — Raise PR</button>
+                <button class="btn-secondary">✏ Revise Spec First</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen4">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar">B</div>
+          <div class="bob-header-text"><div class="name">Bob — Agent Mode</div><div class="sub">Step 4 · Raising PR to Merge Spec</div></div>
+          <div class="pills"><span class="pill">github-mcp</span><span class="pill">slack</span></div>
+        </div>
+        <div class="bob-messages">
+          <div class="msg bob">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              🔀 Creating pull request on GitHub via <strong>GitHub MCP</strong>…<br /><br />
+              <div class="github-panel">
+                <div class="gh-header">
+                  <span style="font-size:18px">🐙</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:600">ibm-org / auth-service</div>
+                    <div style="font-size:10px;color:#8b949e">github.com</div>
+                  </div>
+                  <span class="pr-badge open" style="margin-left:auto">Open</span>
+                </div>
+                <div style="font-size:13px;font-weight:600;margin-bottom:6px">PR #47 — feat: add user auth technical spec</div>
+                <div style="font-size:11px;color:#8b949e;margin-bottom:10px">bob-agent → main · 3 minutes ago</div>
+                <div class="file-list">
+                  <div class="file-item"><span class="diff-pill">+1</span> <span class="plus">+</span> docs/specs/auth-service-spec.yaml</div>
+                  <div class="file-item"><span class="diff-pill">+1</span> <span class="plus">+</span> docs/specs/auth-service-test-cases.md</div>
+                  <div class="file-item"><span class="diff-pill">+1</span> <span class="plus">+</span> docs/specs/auth-service-data-models.yaml</div>
+                </div>
+              </div>
+              <br />
+              PR raised successfully. Sending Slack notification…
+              <div class="slack-notif">
+                <span class="slack-icon">💬</span>
+                <div class="slack-text">
+                  <div class="channel">#eng-auth-team</div>
+                  <div class="message">
+                    🤖 <strong>Bob Agent</strong> · just now<br />
+                    New PR ready for review: <a href="#">PR #47 — feat: add user auth technical spec</a><br />
+                    Spec generated from PRD_UserAuth_v2.pdf · 3 files · Ready to merge ✅
+                  </div>
+                </div>
+              </div>
+              <div class="action-row">
+                <button class="btn-primary" id="goToMerge">Simulate PR Merge →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen5">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar" style="background:#238636">G</div>
+          <div class="bob-header-text"><div class="name">GitHub — Human Review</div><div class="sub">Step 5 · PR Review &amp; Merge</div></div>
+          <div class="pills"><span class="pill">human action</span><span class="pill">github</span></div>
+        </div>
+        <div class="bob-messages">
+          <div class="msg bob">
+            <div class="avatar" style="background:#238636">G</div>
+            <div class="bubble">
+              <strong>PR #47 is ready for your review.</strong><br /><br />
+              <div class="github-panel">
+                <div class="gh-header">
+                  <span style="font-size:18px">🐙</span>
+                  <div>
+                    <div style="font-size:13px;font-weight:600">PR #47 — feat: add user auth technical spec</div>
+                    <div style="font-size:10px;color:#8b949e">bob-agent wants to merge 3 commits into main</div>
+                  </div>
+                  <span class="pr-badge open" style="margin-left:auto" id="prBadge5">Open</span>
+                </div>
+                <div style="background:#161b22;border-radius:4px;padding:10px;font-size:11px;color:#8b949e;margin-bottom:10px">
+                  <div style="color:#e6edf3;margin-bottom:4px">📝 PR Description (by Bob)</div>
+                  This PR adds the technical specification for the User Authentication module, generated from PRD_UserAuth_v2.pdf. Includes API spec (YAML), test cases, and data models. All 24 PRD requirements covered. Review checklist passed ✅.
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:10px">
+                  <div style="background:#161b22;border-radius:4px;padding:8px 10px;font-size:11px;flex:1">
+                    <div style="color:#3fb950">✓</div>
+                    <div style="color:#e6edf3;font-weight:600">CI checks passed</div>
+                    <div style="color:#8b949e">lint, format, schema-validate</div>
+                  </div>
+                  <div style="background:#161b22;border-radius:4px;padding:8px 10px;font-size:11px;flex:1">
+                    <div style="color:#3fb950">✓</div>
+                    <div style="color:#e6edf3;font-weight:600">No conflicts</div>
+                    <div style="color:#8b949e">Branch: feat/auth-spec</div>
+                  </div>
+                </div>
+              </div>
+              Review and decide:
+              <div class="action-row" id="mergeActions">
+                <button class="btn-primary" id="approveMerge">✓ Approve &amp; Merge</button>
+                <button class="btn-danger" id="rejectPR">✗ Request Changes</button>
+              </div>
+              <div id="mergeResult" style="display:none">
+                <div class="github-panel" style="margin-top:10px">
+                  <div style="color:#3fb950;font-size:13px;font-weight:600;margin-bottom:6px">🎉 PR #47 Merged successfully</div>
+                  <div style="font-size:11px;color:#8b949e">Merged by: you · feat/auth-spec → main · 1 file changed, +184 additions</div>
+                </div>
+                <div class="slack-notif" style="margin-top:10px">
+                  <span class="slack-icon">💬</span>
+                  <div class="slack-text">
+                    <div class="channel">#eng-auth-team</div>
+                    <div class="message">✅ <strong>PR #47 merged!</strong> auth-service spec is now in main. Bob is ready to generate code. <a href="#">View diff</a></div>
+                  </div>
+                </div>
+                <div class="action-row" style="margin-top:12px">
+                  <button class="btn-primary" id="goToCodeGen">Generate Code →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen6">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar">B</div>
+          <div class="bob-header-text"><div class="name">Bob — Agent Mode</div><div class="sub">Step 6 · Generating Code from Spec</div></div>
+          <div class="pills"><span class="pill">code-gen</span><span class="pill">backend</span><span class="pill">frontend</span></div>
+        </div>
+        <div class="bob-messages" id="msgs6">
+          <div class="msg bob">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              📥 Pulled merged changes from <strong>main</strong> branch.<br />
+              Loaded spec: <code style="background:#f4f4f4;padding:1px 4px;border-radius:3px;font-size:11px">docs/specs/auth-service-spec.yaml</code><br /><br />
+              Do you want me to generate code for the auth-service based on the merged spec? <span class="badge-info">Y / N</span>
+              <div class="action-row">
+                <button class="btn-primary" id="startCodeGen">✓ Yes — Generate Code</button>
+                <button class="btn-secondary">Review spec first</button>
+              </div>
+            </div>
+          </div>
+          <div class="msg bob" id="step6-typing" style="display:none">
+            <div class="avatar">B</div>
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="msg bob" id="step6-code" style="display:none">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              ✅ Code generation complete! <span class="badge-success">Backend + Frontend</span><br /><br />
+              <div style="background:#f4f4f4;border:1px solid #e0e0e0;border-radius:6px;padding:10px;font-size:12px;margin-bottom:10px">
+                <div style="font-weight:600;margin-bottom:8px;color:#1f2328">📁 Generated Files</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;gap:8px;align-items:center"><span style="color:#0043ce;font-family:monospace;font-size:11px">src/controllers/authController.ts</span><span class="badge-success">+287 lines</span></div>
+                  <div style="display:flex;gap:8px;align-items:center"><span style="color:#0043ce;font-family:monospace;font-size:11px">src/services/authService.ts</span><span class="badge-success">+194 lines</span></div>
+                  <div style="display:flex;gap:8px;align-items:center"><span style="color:#0043ce;font-family:monospace;font-size:11px">src/middleware/jwtMiddleware.ts</span><span class="badge-success">+88 lines</span></div>
+                  <div style="display:flex;gap:8px;align-items:center"><span style="color:#0043ce;font-family:monospace;font-size:11px">src/models/User.ts</span><span class="badge-success">+64 lines</span></div>
+                  <div style="display:flex;gap:8px;align-items:center"><span style="color:#0043ce;font-family:monospace;font-size:11px">frontend/src/pages/LoginPage.tsx</span><span class="badge-success">+203 lines</span></div>
+                  <div style="display:flex;gap:8px;align-items:center"><span style="color:#0043ce;font-family:monospace;font-size:11px">frontend/src/components/AuthForm.tsx</span><span class="badge-success">+156 lines</span></div>
+                </div>
+              </div>
+              <div class="spec-viewer" style="max-height:160px">
+<span class="com">// authController.ts — Generated by Bob</span>
+<span class="kw">import</span> { Request, Response } <span class="kw">from</span> <span class="str">'express'</span>
+<span class="kw">import</span> { authService } <span class="kw">from</span> <span class="str">'../services/authService'</span>
+<span class="kw">import</span> { validateLoginInput } <span class="kw">from</span> <span class="str">'../validators/auth'</span>
+
+<span class="kw">export const</span> <span class="prop">login</span> = <span class="kw">async</span> (req: Request, res: Response) =&gt; {
+  <span class="kw">const</span> { email, password, mfa_token } = req.body
+  <span class="kw">const</span> validation = validateLoginInput({ email, password })
+  <span class="kw">if</span> (!validation.valid) <span class="kw">return</span> res.status(<span class="num">422</span>).json(validation.errors)
+
+  <span class="kw">const</span> result = <span class="kw">await</span> authService.authenticate({ email, password, mfa_token })
+  <span class="kw">if</span> (!result.success) <span class="kw">return</span> res.status(<span class="num">401</span>).json({ error: <span class="str">'Invalid credentials'</span> })
+
+  res.json({ access_token: result.token, refresh_token: result.refresh })
+}
+              </div>
+              <br />
+              Running test suite against generated code…
+              <div class="action-row">
+                <button class="btn-primary" id="runTests">Run Tests →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="screen" id="screen7">
+      <div class="bob-shell">
+        <div class="bob-header">
+          <div class="bob-avatar">B</div>
+          <div class="bob-header-text"><div class="name">Bob — Agent Mode</div><div class="sub">Step 7 · Test Results + Final PR</div></div>
+          <div class="pills"><span class="pill">jest</span><span class="pill">github-mcp</span><span class="pill">slack</span></div>
+        </div>
+        <div class="bob-messages" id="msgs7">
+          <div class="msg bob">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              🧪 Running test cases from <code style="background:#f4f4f4;padding:1px 4px;border-radius:3px;font-size:11px">auth-service-test-cases.md</code>…
+            </div>
+          </div>
+          <div class="msg bob" id="step7-typing">
+            <div class="avatar">B</div>
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="msg bob" id="step7-results" style="display:none">
+            <div class="avatar">B</div>
+            <div class="bubble">
+              <strong>Test Results</strong> <span class="badge-success">6/6 PASSED</span><br /><br />
+              <div class="test-panel">
+                <div class="t-head">● auth-service test suite</div>
+                <div class="t-line"><span class="t-pass">✓</span> TC-001: Valid credentials return 200 + JWT (43ms)</div>
+                <div class="t-line"><span class="t-pass">✓</span> TC-002: Invalid password returns 401 (12ms)</div>
+                <div class="t-line"><span class="t-pass">✓</span> TC-003: Expired token returns 401 with refresh hint (18ms)</div>
+                <div class="t-line"><span class="t-pass">✓</span> TC-004: Rate limit after 5 failed attempts → 429 (67ms)</div>
+                <div class="t-line"><span class="t-pass">✓</span> TC-005: MFA required when user has TOTP enabled (29ms)</div>
+                <div class="t-line"><span class="t-pass">✓</span> TC-006: Refresh token rotation invalidates old token (54ms)</div>
+                <div class="t-summary" style="color:#3fb950">Tests: 6 passed, 0 failed · Coverage: 94.2% · Time: 3.2s</div>
+              </div>
+              <br />
+              All tests pass! Do you want to proceed and raise a PR for the generated code? <span class="badge-info">Y / N</span>
+              <div class="action-row" id="finalPRActions">
+                <button class="btn-primary" id="raiseFinalPR">✓ Yes — Raise PR</button>
+                <button class="btn-secondary">Review code first</button>
+              </div>
+              <div id="finalPRResult" style="display:none">
+                <div class="github-panel" style="margin-top:12px">
+                  <div class="gh-header">
+                    <span style="font-size:18px">🐙</span>
+                    <div>
+                      <div style="font-size:13px;font-weight:600">ibm-org / auth-service</div>
+                      <div style="font-size:10px;color:#8b949e">github.com</div>
+                    </div>
+                    <span class="pr-badge open" style="margin-left:auto">Open</span>
+                  </div>
+                  <div style="font-size:13px;font-weight:600;margin-bottom:4px">PR #48 — feat: implement user authentication module</div>
+                  <div style="font-size:11px;color:#8b949e;margin-bottom:8px">bob-agent → main · 6 files changed · +992 additions · Tests: 6/6 ✅</div>
+                  <div class="file-list">
+                    <div class="file-item"><span class="diff-pill">+287</span> <span class="plus">+</span> src/controllers/authController.ts</div>
+                    <div class="file-item"><span class="diff-pill">+194</span> <span class="plus">+</span> src/services/authService.ts</div>
+                    <div class="file-item"><span class="diff-pill">+88</span> <span class="plus">+</span> src/middleware/jwtMiddleware.ts</div>
+                    <div class="file-item"><span class="diff-pill">+64</span> <span class="plus">+</span> src/models/User.ts</div>
+                    <div class="file-item"><span class="diff-pill">+203</span> <span class="plus">+</span> frontend/src/pages/LoginPage.tsx</div>
+                    <div class="file-item"><span class="diff-pill">+156</span> <span class="plus">+</span> frontend/src/components/AuthForm.tsx</div>
+                  </div>
+                </div>
+                <div class="slack-notif" style="margin-top:10px">
+                  <span class="slack-icon">💬</span>
+                  <div class="slack-text">
+                    <div class="channel">#eng-auth-team</div>
+                    <div class="message">
+                      🚀 <strong>Bob Agent</strong> · just now<br />
+                      PR #48 is ready for review: <a href="#">feat: implement user authentication module</a><br />
+                      6 files · 992 lines · 6/6 tests passing ✅ · Generated from PRD_UserAuth_v2.pdf
+                    </div>
+                  </div>
+                </div>
+                <div style="background:#d9fbdb;border:1px solid #a7f0ba;border-radius:6px;padding:16px;margin-top:12px;text-align:center">
+                  <div style="font-size:18px;margin-bottom:6px">🎉</div>
+                  <div style="font-weight:700;font-size:14px;color:#1f2328">End-to-End Flow Complete!</div>
+                  <div style="font-size:12px;color:#525252;margin-top:4px">PRD → Spec → Review → Merge → Code → Tests → PR</div>
+                  <div style="font-size:11px;color:#525252;margin-top:8px">Bob autonomously completed the full development workflow.<br />Human review is the only required checkpoint before merging.</div>
+                  <button class="btn-primary" id="restartBtn" style="margin-top:12px">↺ Restart Demo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bob-input-area">
+          <textarea class="bob-input"></textarea>
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div style="text-align:center;padding:10px;font-size:11px;color:#8d8d8d;border-top:1px solid #e0e0e0;background:#fff">Made with IBM Bob</div>
+
+
+</body>
+</html>
